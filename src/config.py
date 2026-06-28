@@ -15,7 +15,7 @@ EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 load_dotenv(ROOT_DIR / ".env")
 
-# Suppress ChromaDB client telemetry noise in local/dev logs
+# See bootstrap_env.py — disables Chroma PostHog telemetry noise in dev
 os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
 
 

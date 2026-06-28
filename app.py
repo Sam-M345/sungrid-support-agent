@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import bootstrap_env  # noqa: F401 — before Chroma loads
+
 import streamlit as st
 
 from src.graph import build_graph, invoke_agent

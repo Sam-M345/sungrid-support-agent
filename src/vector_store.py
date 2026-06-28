@@ -6,6 +6,7 @@ import hashlib
 import json
 from pathlib import Path
 
+from chromadb.config import Settings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -15,6 +16,7 @@ from src.document_loader import load_documents
 
 HASH_FILE = "docs_hash.json"
 COLLECTION_NAME = "sungrid_docs"
+CHROMA_CLIENT_SETTINGS = Settings(anonymized_telemetry=False)
 
 
 def _docs_fingerprint(docs_dir: Path) -> str:
@@ -63,6 +65,7 @@ def build_vector_store(force_rebuild: bool = False) -> Chroma:
             collection_name=COLLECTION_NAME,
             embedding_function=embeddings,
             persist_directory=str(chroma_dir),
+            client_settings=CHROMA_CLIENT_SETTINGS,
         )
 
     documents = load_documents(docs_dir)
@@ -76,6 +79,7 @@ def build_vector_store(force_rebuild: bool = False) -> Chroma:
         embedding=embeddings,
         collection_name=COLLECTION_NAME,
         persist_directory=str(chroma_dir),
+        client_settings=CHROMA_CLIENT_SETTINGS,
     )
     _write_stored_hash(chroma_dir, fingerprint, len(documents))
     return vector_store

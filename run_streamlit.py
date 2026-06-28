@@ -6,6 +6,8 @@ Opens http://localhost:8501 in your browser.
 
 from __future__ import annotations
 
+import bootstrap_env  # noqa: F401 — before Chroma loads
+
 import ensure_venv  # noqa: F401 — use project .venv when Play is clicked
 
 import subprocess

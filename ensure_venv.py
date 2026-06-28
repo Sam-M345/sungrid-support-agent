@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import bootstrap_env  # noqa: F401 — before Chroma loads
+
 import subprocess
 import sys
 from pathlib import Path
