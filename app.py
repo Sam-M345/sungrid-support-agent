@@ -210,6 +210,58 @@ def render_sample_questions() -> None:
             )
 
 
+def render_answer_trace_and_sources(result: dict) -> None:
+    st.markdown("---")
+    st.markdown(
+        "<p style='text-align: center; letter-spacing: 0.15em; color: #888;'>"
+        "*********</p>",
+        unsafe_allow_html=True,
+    )
+    st.caption(
+        "The section below is for engineers, developers, and technical reviewers. "
+        "Support reps can focus on the customer reply and internal note above."
+    )
+    st.markdown("##### Answer Trace & Sources")
+    st.code(
+        "RAG + LangGraph execution path:\n"
+        "question -> classify_intent -> retrieve_documents -> generate_answer "
+        "-> validate_answer -> risk_scoring -> format_response",
+        language="text",
+    )
+    st.caption(
+        "Retrieved chunks were passed into the generation node as grounded context. "
+        "The final answer was generated only after citation validation and risk scoring."
+    )
+    st.markdown("**Sources used**")
+    sources = result.get("sources", [])
+    if sources:
+        for index, source in enumerate(sources, start=1):
+            st.markdown(f"{index}. {source}")
+    else:
+        st.write("No sources returned.")
+
+    st.markdown("**Workflow trace**")
+    for step in result.get("workflow_trace", []):
+        st.markdown(f"- {step}")
+
+    st.markdown("**Retrieved context**")
+    chunks = result.get("retrieved_chunks", [])
+    if not chunks:
+        st.write("No retrieved chunks.")
+    else:
+        for index, chunk in enumerate(chunks, start=1):
+            metadata = chunk.metadata
+            st.markdown(
+                f"**[{index}] {metadata.get('source', 'Unknown')} | "
+                f"Section {metadata.get('section_id', '?')} - "
+                f"{metadata.get('section_title', 'Unknown')}**"
+            )
+            st.markdown(chunk.page_content)
+
+    st.markdown("---")
+    render_workflow_code_snippets(result)
+
+
 def render_results(result: dict) -> None:
     risk_level = result.get("risk_level", "Low")
     escalation_required = result.get("escalation_required", False)
@@ -246,45 +298,7 @@ def render_results(result: dict) -> None:
         """
     )
 
-    with st.expander("Answer Trace & Sources", expanded=False):
-        st.code(
-            "RAG + LangGraph execution path:\n"
-            "question -> classify_intent -> retrieve_documents -> generate_answer "
-            "-> validate_answer -> risk_scoring -> format_response",
-            language="text",
-        )
-        st.caption(
-            "Retrieved chunks were passed into the generation node as grounded context. "
-            "The final answer was generated only after citation validation and risk scoring."
-        )
-        st.markdown("**Sources used**")
-        sources = result.get("sources", [])
-        if sources:
-            for index, source in enumerate(sources, start=1):
-                st.markdown(f"{index}. {source}")
-        else:
-            st.write("No sources returned.")
-
-        st.markdown("**Workflow trace**")
-        for step in result.get("workflow_trace", []):
-            st.markdown(f"- {step}")
-
-        st.markdown("**Retrieved context**")
-        chunks = result.get("retrieved_chunks", [])
-        if not chunks:
-            st.write("No retrieved chunks.")
-        else:
-            for index, chunk in enumerate(chunks, start=1):
-                metadata = chunk.metadata
-                st.markdown(
-                    f"**[{index}] {metadata.get('source', 'Unknown')} | "
-                    f"Section {metadata.get('section_id', '?')} - "
-                    f"{metadata.get('section_title', 'Unknown')}**"
-                )
-                st.markdown(chunk.page_content)
-
-        st.markdown("---")
-        render_workflow_code_snippets(result)
+    render_answer_trace_and_sources(result)
 
 
 def main() -> None:
