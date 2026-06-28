@@ -8,8 +8,8 @@ from src.graph import build_graph, invoke_agent
 from src.vector_store import get_vector_store
 
 DISCLAIMER = (
-    "Demo note: This is a synthetic portfolio project using fictional company "
-    "documents. Not real solar, warranty, safety, or financial advice."
+    "Synthetic portfolio demo — fictional company documents only. "
+    "Not real solar, warranty, safety, or financial advice."
 )
 
 SAMPLE_QUESTIONS = [
@@ -50,7 +50,12 @@ SAMPLE_QUESTIONS = [
     ),
 ]
 
-DEFAULT_QUESTION = SAMPLE_QUESTIONS[0][1]
+DEFAULT_QUESTION = SAMPLE_QUESTIONS[4][1]  # Storm + inverter — good general demo
+
+
+def select_sample_question(question: str) -> None:
+    """Load a sample into the text area (must run via button callback)."""
+    st.session_state.question_input = question
 
 
 @st.cache_resource(show_spinner="Loading knowledge base...")
@@ -62,35 +67,72 @@ def load_resources():
 
 def render_header() -> None:
     st.title("SunGrid Support Agent")
-    st.markdown(
-        "Helps solar **customer support reps** answer homeowner questions using "
-        "synthetic company documents, **RAG**, **LangGraph** workflow routing, "
-        "and **risk-based escalation**."
+    st.info(
+        "**Used by:** SunGrid customer support reps. Paste a homeowner message to "
+        "generate a customer-ready reply, internal notes, sources, and escalation guidance."
     )
-    st.caption(DISCLAIMER)
+    st.caption(
+        "Internal copilot powered by RAG, LangGraph, and risk-based escalation. "
+        + DISCLAIMER
+    )
 
 
 def render_sidebar() -> None:
-    st.sidebar.header("About this demo")
+    st.sidebar.header("How it works")
     st.sidebar.markdown(
-        "- **User:** SunGrid customer support rep  \n"
-        "- **Input:** Homeowner question  \n"
-        "- **Output:** Draft reply, internal note, sources, workflow trace  \n"
-        "- **Why not a generic chatbot:** Answers are grounded in internal policy docs"
+        "1. Customer contacts SunGrid  \n"
+        "2. **Rep** pastes their message  \n"
+        "3. AI retrieves internal policies  \n"
+        "4. Rep reviews draft + sends to customer"
     )
     st.sidebar.markdown("---")
-    st.sidebar.markdown("**Stack:** Claude, LangChain, LangGraph, Chroma, LangSmith")
+    st.sidebar.caption("Claude · LangChain · LangGraph · Chroma · LangSmith")
+
+
+def render_question_input() -> str:
+    st.subheader("Paste the customer's question")
+    st.caption(
+        "Enter the message as the homeowner wrote it — from email, chat, or phone notes."
+    )
+
+    question = st.text_area(
+        "Customer message",
+        key="question_input",
+        height=120,
+        placeholder=(
+            "Example: The customer wrote — "
+            "'My monitoring app stopped showing production. Is my system broken?'"
+        ),
+        label_visibility="collapsed",
+    )
+
+    run_clicked = st.button("Generate support draft", type="primary")
+
+    if run_clicked:
+        trimmed = question.strip()
+        if not trimmed:
+            st.warning("Paste the customer's message first, or pick a sample below.")
+        else:
+            _, workflow = load_resources()
+            with st.spinner("Running LangGraph workflow..."):
+                st.session_state["last_result"] = invoke_agent(trimmed, app=workflow)
+
+    return question
 
 
 def render_sample_questions() -> None:
-    st.subheader("Sample homeowner questions")
-    st.caption("Click a sample to load it below, then run the assistant.")
-
-    cols = st.columns(2)
-    for index, (label, question) in enumerate(SAMPLE_QUESTIONS):
-        column = cols[index % 2]
-        if column.button(label, key=f"sample_btn_{index}", use_container_width=True):
-            st.session_state["question_input"] = question
+    with st.expander("Common customer questions", expanded=False):
+        st.caption("Click a sample question to test the assistant.")
+        cols = st.columns(2)
+        for index, (label, question) in enumerate(SAMPLE_QUESTIONS):
+            column = cols[index % 2]
+            column.button(
+                label,
+                key=f"sample_btn_{index}",
+                use_container_width=True,
+                on_click=select_sample_question,
+                args=(question,),
+            )
 
 
 def render_results(result: dict) -> None:
@@ -108,15 +150,15 @@ def render_results(result: dict) -> None:
 
     if is_high_risk:
         st.error(
-            "High-risk case: remote troubleshooting is stopped. "
-            "Escalate to a qualified technician."
+            "High-risk case: stop remote troubleshooting and escalate to a "
+            "qualified technician."
         )
 
-    st.markdown("#### Customer-ready response")
+    st.markdown("##### Reply to send the customer")
     st.info(result.get("customer_response", ""))
 
     note = result.get("internal_note", {})
-    st.markdown("#### Internal support note")
+    st.markdown("##### Internal note (for the rep)")
     st.markdown(
         f"""
 | Field | Value |
@@ -129,22 +171,20 @@ def render_results(result: dict) -> None:
         """
     )
 
-    if note.get("validation_notes"):
-        st.caption(f"Validation: {note.get('validation_notes')}")
+    with st.expander("Answer Trace & Sources", expanded=False):
+        st.markdown("**Sources used**")
+        sources = result.get("sources", [])
+        if sources:
+            for index, source in enumerate(sources, start=1):
+                st.markdown(f"{index}. {source}")
+        else:
+            st.write("No sources returned.")
 
-    st.markdown("#### Sources used")
-    sources = result.get("sources", [])
-    if sources:
-        for index, source in enumerate(sources, start=1):
-            st.markdown(f"{index}. {source}")
-    else:
-        st.write("No sources returned.")
+        st.markdown("**Workflow trace**")
+        for step in result.get("workflow_trace", []):
+            st.markdown(f"- {step}")
 
-    st.markdown("#### Workflow trace")
-    for step in result.get("workflow_trace", []):
-        st.markdown(f"- {step}")
-
-    with st.expander("View retrieved context"):
+        st.markdown("**Retrieved context**")
         chunks = result.get("retrieved_chunks", [])
         if not chunks:
             st.write("No retrieved chunks.")
@@ -171,26 +211,8 @@ def main() -> None:
 
     render_sidebar()
     render_header()
+    render_question_input()
     render_sample_questions()
-
-    st.subheader("Ask a homeowner question")
-    question = st.text_area(
-        "Homeowner question",
-        key="question_input",
-        height=120,
-        placeholder="Example: My monitoring app stopped showing production data...",
-    )
-
-    run_clicked = st.button("Run SunGrid Support Agent", type="primary")
-
-    if run_clicked:
-        trimmed = question.strip()
-        if not trimmed:
-            st.warning("Enter a homeowner question or click a sample question first.")
-        else:
-            _, workflow = load_resources()
-            with st.spinner("Running LangGraph workflow..."):
-                st.session_state["last_result"] = invoke_agent(trimmed, app=workflow)
 
     if "last_result" in st.session_state:
         st.markdown("---")
