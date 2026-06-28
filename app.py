@@ -147,7 +147,11 @@ def render_sidebar() -> None:
         "4. Rep reviews draft + sends to customer"
     )
     st.sidebar.markdown("---")
-    st.sidebar.caption("Claude · LangChain · LangGraph · Chroma · LangSmith")
+    st.sidebar.header("Project Tech Stack")
+    st.sidebar.markdown(
+        "LLM: Claude · Framework: LangChain · Vector DB: Chroma · "
+        "Workflow: LangGraph · Tracing: LangSmith"
+    )
 
 
 def render_workflow_code_snippets(result: dict) -> None:
