@@ -50,7 +50,7 @@ class Settings:
 def load_settings() -> Settings:
     return Settings(
         anthropic_api_key=_require("ANTHROPIC_API_KEY"),
-        anthropic_model=_optional("ANTHROPIC_MODEL", "claude-sonnet-4-20250514"),
+        anthropic_model=_optional("ANTHROPIC_MODEL", "claude-sonnet-4-6"),
         langchain_tracing_v2=_optional_bool("LANGCHAIN_TRACING_V2", False),
         langchain_api_key=_optional("LANGCHAIN_API_KEY"),
         langchain_project=_optional("LANGCHAIN_PROJECT", "sungrid-support-agent"),
