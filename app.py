@@ -52,6 +52,67 @@ SAMPLE_QUESTIONS = [
 
 DEFAULT_QUESTION = SAMPLE_QUESTIONS[4][1]  # Storm + inverter — good general demo
 
+WORKFLOW_CODE_SNIPPETS = [
+    {
+        "node": "classify_intent",
+        "file": "src/nodes/classify.py",
+        "code": (
+            "safety_risk = _is_safety_query(question)\n"
+            'raw = invoke_llm(CLASSIFY_SYSTEM, f"Classify this homeowner question:\\n{question}")\n'
+            "intents = payload.get('intents', [])\n"
+            'intent_label = " + ".join(intents)'
+        ),
+    },
+    {
+        "node": "retrieve_documents",
+        "file": "src/nodes/retrieve.py",
+        "code": (
+            'documents = retrieve_documents(state["question"])\n'
+            "sources = format_sources(documents)\n"
+            'return {**state, "retrieved_chunks": documents, "sources": sources}'
+        ),
+    },
+    {
+        "node": "generate_answer",
+        "file": "src/nodes/generate.py",
+        "code": (
+            "context = format_context(state.get('retrieved_chunks', []))\n"
+            "raw = invoke_llm(\n"
+            "    GENERATE_SYSTEM,\n"
+            "    GENERATE_USER.format(question=question, intent=intent, context=context),\n"
+            ")"
+        ),
+        "code_safety": (
+            "context = format_context(state.get('retrieved_chunks', []))\n"
+            "raw = invoke_llm(\n"
+            "    SAFETY_GENERATE_SYSTEM,\n"
+            "    SAFETY_GENERATE_USER.format(question=question, context=context),\n"
+            ")"
+        ),
+    },
+    {
+        "node": "validate_answer",
+        "file": "src/nodes/validate.py",
+        "code": (
+            "passed, issues, confidence = validate_response(\n"
+            "    question, customer_response, safety_risk, llm_passed, llm_issues, confidence\n"
+            ")\n"
+            'return {**state, "validation_passed": passed, "confidence": confidence}'
+        ),
+    },
+    {
+        "node": "risk_scoring",
+        "file": "src/nodes/risk_scoring.py",
+        "code": (
+            "if safety_risk:\n"
+            '    risk_level = "High"\n'
+            "    escalation_required = True\n"
+            "elif not validation_passed or confidence < 60:\n"
+            "    escalation_required = True"
+        ),
+    },
+]
+
 
 def select_sample_question(question: str) -> None:
     """Load a sample into the text area (must run via button callback)."""
@@ -87,6 +148,16 @@ def render_sidebar() -> None:
     )
     st.sidebar.markdown("---")
     st.sidebar.caption("Claude · LangChain · LangGraph · Chroma · LangSmith")
+
+
+def render_workflow_code_snippets(result: dict) -> None:
+    st.markdown("**Implementation snippets (from this run's workflow)**")
+    is_safety = result.get("risk_level") == "High" or "safety" in result.get("intent", "").lower()
+
+    for snippet in WORKFLOW_CODE_SNIPPETS:
+        code = snippet.get("code_safety") if snippet["node"] == "generate_answer" and is_safety else snippet["code"]
+        st.markdown(f"`{snippet['node']}` · `{snippet['file']}`")
+        st.code(code, language="python")
 
 
 def render_question_input() -> str:
@@ -172,6 +243,16 @@ def render_results(result: dict) -> None:
     )
 
     with st.expander("Answer Trace & Sources", expanded=False):
+        st.code(
+            "RAG + LangGraph execution path:\n"
+            "question -> classify_intent -> retrieve_documents -> generate_answer "
+            "-> validate_answer -> risk_scoring -> format_response",
+            language="text",
+        )
+        st.caption(
+            "Retrieved chunks were passed into the generation node as grounded context. "
+            "The final answer was generated only after citation validation and risk scoring."
+        )
         st.markdown("**Sources used**")
         sources = result.get("sources", [])
         if sources:
@@ -188,15 +269,18 @@ def render_results(result: dict) -> None:
         chunks = result.get("retrieved_chunks", [])
         if not chunks:
             st.write("No retrieved chunks.")
-            return
-        for index, chunk in enumerate(chunks, start=1):
-            metadata = chunk.metadata
-            st.markdown(
-                f"**[{index}] {metadata.get('source', 'Unknown')} | "
-                f"Section {metadata.get('section_id', '?')} - "
-                f"{metadata.get('section_title', 'Unknown')}**"
-            )
-            st.code(chunk.page_content, language="markdown")
+        else:
+            for index, chunk in enumerate(chunks, start=1):
+                metadata = chunk.metadata
+                st.markdown(
+                    f"**[{index}] {metadata.get('source', 'Unknown')} | "
+                    f"Section {metadata.get('section_id', '?')} - "
+                    f"{metadata.get('section_title', 'Unknown')}**"
+                )
+                st.code(chunk.page_content, language="markdown")
+
+        st.markdown("---")
+        render_workflow_code_snippets(result)
 
 
 def main() -> None:
