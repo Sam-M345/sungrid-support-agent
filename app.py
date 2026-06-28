@@ -277,7 +277,7 @@ def render_results(result: dict) -> None:
                     f"Section {metadata.get('section_id', '?')} - "
                     f"{metadata.get('section_title', 'Unknown')}**"
                 )
-                st.code(chunk.page_content, language="markdown")
+                st.markdown(chunk.page_content)
 
         st.markdown("---")
         render_workflow_code_snippets(result)
