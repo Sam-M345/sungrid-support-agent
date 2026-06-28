@@ -1,6 +1,18 @@
-"""Smoke test: verify retrieval for the 8 sample demo questions."""
+"""Smoke test: verify retrieval for the 8 sample demo questions.
+
+VS Code: open this file and click Run (play button).
+"""
 
 from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+import ensure_venv  # noqa: F401 — use project .venv when Play is clicked
 
 from src.retriever import format_chunk_for_display, retrieve_documents
 from src.vector_store import get_vector_store

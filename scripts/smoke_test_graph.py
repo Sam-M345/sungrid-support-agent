@@ -1,6 +1,18 @@
-"""End-to-end smoke test for the LangGraph support agent."""
+"""End-to-end smoke test for the LangGraph support agent.
+
+VS Code: open this file and click Run (play button).
+"""
 
 from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+import ensure_venv  # noqa: F401 — use project .venv when Play is clicked
 
 from src.graph import run_agent
 from src.validation import find_diy_advice
