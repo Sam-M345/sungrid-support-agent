@@ -15,6 +15,9 @@ EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 load_dotenv(ROOT_DIR / ".env")
 
+# Suppress ChromaDB client telemetry noise in local/dev logs
+os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
+
 
 def _require(name: str) -> str:
     value = os.getenv(name, "").strip()

@@ -35,8 +35,9 @@ def build_graph():
     return graph.compile()
 
 
-def run_agent(question: str) -> dict:
-    app = build_graph()
+def invoke_agent(question: str, app=None) -> dict:
+    """Run the support agent workflow for a homeowner question."""
+    workflow = app or build_graph()
     initial_state: AgentState = {
         "question": question,
         "intent": "",
@@ -54,5 +55,10 @@ def run_agent(question: str) -> dict:
         "validation_notes": "",
         "validation_passed": True,
     }
-    final_state = app.invoke(initial_state)
+    final_state = workflow.invoke(initial_state)
     return build_final_response(final_state)
+
+
+def run_agent(question: str) -> dict:
+    """Backward-compatible entry point."""
+    return invoke_agent(question)
