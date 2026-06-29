@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import bootstrap_env  # noqa: F401 — before Chroma loads
 
+import threading
+import time
+
 import streamlit as st
 
 from src.graph import build_graph, invoke_agent
@@ -53,6 +56,18 @@ SAMPLE_QUESTIONS = [
 ]
 
 DEFAULT_QUESTION = SAMPLE_QUESTIONS[4][1]  # Storm + inverter — good general demo
+
+WORKFLOW_STATUS_MESSAGES = [
+    "Classifying customer intent...",
+    "Retrieving policy documents from Chroma...",
+    "Sending grounded context to Claude...",
+    "Generating customer-ready response...",
+    "Validating citations against sources...",
+    "Scoring risk and escalation...",
+    "Formatting support draft...",
+]
+WORKFLOW_ESTIMATED_SECONDS = 20.0
+WORKFLOW_STATUS_INTERVAL_SECONDS = 2.5
 
 WORKFLOW_CODE_SNIPPETS = [
     {
@@ -166,6 +181,49 @@ def render_workflow_code_snippets(result: dict) -> None:
         st.code(code, language="python")
 
 
+def run_agent_with_progress(question: str, workflow) -> dict | None:
+    """Run the agent with a time-based progress bar and rotating status labels."""
+    progress = st.progress(0)
+    status = st.empty()
+
+    result_box: dict = {}
+    error_box: dict = {}
+
+    def _run() -> None:
+        try:
+            result_box["result"] = invoke_agent(question, app=workflow)
+        except Exception as exc:
+            error_box["error"] = exc
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+
+    start = time.time()
+    while thread.is_alive():
+        elapsed = time.time() - start
+        pct = min(int(elapsed / WORKFLOW_ESTIMATED_SECONDS * 100), 99)
+        progress.progress(pct)
+
+        msg_index = int(elapsed // WORKFLOW_STATUS_INTERVAL_SECONDS) % len(
+            WORKFLOW_STATUS_MESSAGES
+        )
+        status.markdown(f"**{WORKFLOW_STATUS_MESSAGES[msg_index]}**")
+
+        time.sleep(0.2)
+
+    thread.join()
+    progress.progress(100)
+    time.sleep(0.4)
+    progress.empty()
+    status.empty()
+
+    if "error" in error_box:
+        st.error(f"Workflow failed: {error_box['error']}")
+        return None
+
+    return result_box.get("result")
+
+
 def render_question_input() -> str:
     st.subheader("Paste the customer's question")
     st.caption(
@@ -191,8 +249,9 @@ def render_question_input() -> str:
             st.warning("Paste the customer's message first, or pick a sample below.")
         else:
             _, workflow = load_resources()
-            with st.spinner("Running LangGraph workflow..."):
-                st.session_state["last_result"] = invoke_agent(trimmed, app=workflow)
+            result = run_agent_with_progress(trimmed, workflow)
+            if result is not None:
+                st.session_state["last_result"] = result
 
     return question
 
