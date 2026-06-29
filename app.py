@@ -168,8 +168,11 @@ def render_sidebar() -> None:
     st.sidebar.markdown("---")
     st.sidebar.header("Project Tech Stack")
     st.sidebar.markdown(
-        "LLM: Claude · Framework: LangChain · Vector DB: Chroma · "
-        "Workflow: LangGraph · Tracing: LangSmith"
+        "- **LLM:** Claude  \n"
+        "- **Framework:** LangChain  \n"
+        "- **Vector DB:** Chroma  \n"
+        "- **Workflow:** LangGraph  \n"
+        "- **Tracing:** LangSmith"
     )
 
 
@@ -221,10 +224,23 @@ def render_internal_note(result: dict, note: dict) -> None:
     )
 
     bullets = _recommended_action_bullets(note.get("recommended_action", ""))
-    steps_html = "".join(
-        f'<li style="margin-bottom:0.65rem;">{html.escape(bullet)}</li>'
-        for bullet in bullets
-    )
+    if len(bullets) == 1:
+        body_html = (
+            f'<p style="margin:0;color:#f0f4f8;line-height:1.55;font-size:0.98rem;">'
+            f"{html.escape(bullets[0])}</p>"
+        )
+    else:
+        steps_html = "".join(
+            f'<li style="margin-bottom:0.65rem;">{html.escape(bullet)}</li>'
+            for bullet in bullets
+        )
+        body_html = f"""<ol style="
+        margin: 0;
+        padding-left: 1.35rem;
+        color: #f0f4f8;
+        line-height: 1.55;
+        font-size: 0.98rem;
+    ">{steps_html}</ol>"""
     st.markdown(
         f"""
 <div style="
@@ -241,13 +257,7 @@ def render_internal_note(result: dict, note: dict) -> None:
         color: #5dade2;
         margin: 0 0 0.85rem 0;
     ">Recommended action</p>
-    <ol style="
-        margin: 0;
-        padding-left: 1.35rem;
-        color: #f0f4f8;
-        line-height: 1.55;
-        font-size: 0.98rem;
-    ">{steps_html}</ol>
+    {body_html}
 </div>
         """,
         unsafe_allow_html=True,
