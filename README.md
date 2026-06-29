@@ -45,7 +45,7 @@ Built for **Solutions Engineer / Applied AI / FDE** roles — business problem f
 
 ![SunGrid Support Agent — problem, journey, RAG, LangGraph, escalation, and impact](assets/project_overview.png)
 
-*AI copilot for reps — not a homeowner chatbot. Covers business problem, user journey, RAG architecture, LangGraph workflow, human escalation, and recruiter highlights.*
+*AI copilot for reps — not a homeowner chatbot. Covers business problem, user journey, RAG architecture, LangGraph workflow, human escalation, and project highlights.*
 
 **Normal path:** classify → retrieve → generate → validate → risk scoring → format response
 
@@ -152,12 +152,19 @@ _Target: Streamlit Community Cloud (Phase 8)_
 
 ## Observability (LangSmith)
 
-Traces appear in project **`sungrid-support-agent`**. Screenshot guide: [`assets/langsmith_capture_guide.md`](assets/langsmith_capture_guide.md)
+Traces appear in project **`sungrid-support-agent`** on every run. Capture guide: [`assets/langsmith_capture_guide.md`](assets/langsmith_capture_guide.md)
 
-| Screenshot | Case |
-|---|---|
-| `assets/langsmith_trace_warranty.png` | Case 1 — warranty / production |
-| `assets/langsmith_trace_safety.png` | Case 3 — burning smell |
+### Warranty + production (Case 1)
+
+Medium risk · escalation not required · grounded in troubleshooting guide §2.1
+
+![LangSmith trace — warranty and production shortfall](assets/langsmith_trace_warranty.png)
+
+### Safety — burning smell (Case 3)
+
+High risk · escalation required · safety policy §3.1 retrieved · no DIY guidance
+
+![LangSmith trace — safety escalation](assets/langsmith_trace_safety.png)
 
 ---
 
@@ -167,6 +174,8 @@ Traces appear in project **`sungrid-support-agent`**. Screenshot guide: [`assets
 |---|---|
 | [`assets/project_overview.png`](assets/project_overview.png) | Primary architecture + workflow infographic |
 | [`assets/streamlit_screenshot.png`](assets/streamlit_screenshot.png) | Demo UI |
+| [`assets/langsmith_trace_warranty.png`](assets/langsmith_trace_warranty.png) | LangSmith trace — Case 1 |
+| [`assets/langsmith_trace_safety.png`](assets/langsmith_trace_safety.png) | LangSmith trace — Case 3 |
 | [`assets/demo_script.md`](assets/demo_script.md) | Camtasia narration script (Phase 9) |
 
 ---
