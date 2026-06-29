@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import bootstrap_env  # noqa: F401 — before Chroma loads
 
+import html
+import re
 import threading
 import time
 
@@ -172,13 +174,88 @@ def render_sidebar() -> None:
 
 
 def render_workflow_code_snippets(result: dict) -> None:
-    st.markdown("**Implementation snippets (from this run's workflow)**")
     is_safety = result.get("risk_level") == "High" or "safety" in result.get("intent", "").lower()
 
     for snippet in WORKFLOW_CODE_SNIPPETS:
         code = snippet.get("code_safety") if snippet["node"] == "generate_answer" and is_safety else snippet["code"]
         st.markdown(f"`{snippet['node']}` · `{snippet['file']}`")
         st.code(code, language="python")
+
+
+def _recommended_action_bullets(action: str) -> list[str]:
+    """Split internal recommended action text into one item per numbered step."""
+    if not action or not action.strip():
+        return ["Review draft and respond to homeowner."]
+
+    text = re.sub(r"\s+", " ", action.strip())
+
+    if re.search(r"\d+\.\s", text):
+        parts = re.split(r"\s*(?=\d+\.\s)", text)
+        bullets: list[str] = []
+        for part in parts:
+            cleaned = re.sub(r"^\d+\.\s*", "", part.strip()).strip()
+            if cleaned:
+                bullets.append(cleaned)
+        if bullets:
+            return bullets
+
+    bullets = []
+    for line in action.strip().split("\n"):
+        cleaned = re.sub(r"^\d+\.\s*", "", line.strip())
+        if cleaned:
+            bullets.append(cleaned)
+
+    if bullets:
+        return bullets
+
+    return [action.strip()]
+
+
+def render_internal_note(result: dict, note: dict) -> None:
+    st.markdown("##### Internal note (for the rep)")
+
+    issue_type = note.get("issue_type", result.get("intent", ""))
+    st.markdown(
+        f"**Issue type**  \n<span style='font-size:0.95rem;'>{html.escape(issue_type)}</span>",
+        unsafe_allow_html=True,
+    )
+
+    bullets = _recommended_action_bullets(note.get("recommended_action", ""))
+    steps_html = "".join(
+        f'<li style="margin-bottom:0.65rem;">{html.escape(bullet)}</li>'
+        for bullet in bullets
+    )
+    st.markdown(
+        f"""
+<div style="
+    background: linear-gradient(135deg, #1a2744 0%, #121a2e 100%);
+    border: 1px solid #3d6fa8;
+    border-left: 5px solid #5dade2;
+    border-radius: 10px;
+    padding: 1.1rem 1.35rem;
+    margin-top: 1rem;
+">
+    <p style="
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #5dade2;
+        margin: 0 0 0.85rem 0;
+    ">Recommended action</p>
+    <ol style="
+        margin: 0;
+        padding-left: 1.35rem;
+        color: #f0f4f8;
+        line-height: 1.55;
+        font-size: 0.98rem;
+    ">{steps_html}</ol>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    validation_notes = note.get("validation_notes", result.get("validation_notes", ""))
+    if validation_notes:
+        st.caption(f"Validation: {validation_notes}")
 
 
 def run_agent_with_progress(question: str, workflow) -> dict | None:
@@ -285,8 +362,13 @@ def render_answer_trace_and_sources(result: dict) -> None:
     st.markdown("##### Answer Trace & Sources")
     st.code(
         "RAG + LangGraph execution path:\n"
-        "question -> classify_intent -> retrieve_documents -> generate_answer "
-        "-> validate_answer -> risk_scoring -> format_response",
+        "question\n"
+        "-> classify_intent\n"
+        "-> retrieve_documents\n"
+        "-> generate_answer\n"
+        "-> validate_answer\n"
+        "-> risk_scoring\n"
+        "-> format_response",
         language="text",
     )
     st.caption(
@@ -319,8 +401,8 @@ def render_answer_trace_and_sources(result: dict) -> None:
             )
             st.markdown(chunk.page_content)
 
-    st.markdown("---")
-    render_workflow_code_snippets(result)
+    with st.expander("Developer implementation snippets", expanded=False):
+        render_workflow_code_snippets(result)
 
 
 def render_results(result: dict) -> None:
@@ -342,22 +424,11 @@ def render_results(result: dict) -> None:
             "qualified technician."
         )
 
+    note = result.get("internal_note", {})
+    render_internal_note(result, note)
+
     st.markdown("##### Reply to send the customer")
     st.info(result.get("customer_response", ""))
-
-    note = result.get("internal_note", {})
-    st.markdown("##### Internal note (for the rep)")
-    st.markdown(
-        f"""
-| Field | Value |
-|---|---|
-| **Issue type** | {note.get("issue_type", result.get("intent", ""))} |
-| **Risk level** | {note.get("risk_level", risk_level)} |
-| **Confidence** | {note.get("confidence", result.get("confidence", 0))}% |
-| **Recommended action** | {note.get("recommended_action", "")} |
-| **Escalation needed** | {"Yes" if note.get("escalation_needed", escalation_required) else "No"} |
-        """
-    )
 
     render_answer_trace_and_sources(result)
 
