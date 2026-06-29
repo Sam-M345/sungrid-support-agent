@@ -14,11 +14,6 @@ import streamlit as st
 from src.graph import build_graph, invoke_agent
 from src.vector_store import get_vector_store
 
-DISCLAIMER = (
-    "Synthetic portfolio demo — fictional company documents only. "
-    "Not real solar, warranty, safety, or financial advice."
-)
-
 SAMPLE_QUESTIONS = [
     (
         "Warranty + production",
@@ -150,10 +145,6 @@ def render_header() -> None:
     st.info(
         "**Used by:** SunGrid customer support reps. Paste a homeowner message to "
         "generate a customer-ready reply, internal notes, sources, and escalation guidance."
-    )
-    st.caption(
-        "Internal copilot powered by RAG, LangGraph, and risk-based escalation. "
-        + DISCLAIMER
     )
 
 
@@ -312,10 +303,7 @@ def run_agent_with_progress(question: str, workflow) -> dict | None:
 
 
 def render_question_input() -> str:
-    st.subheader("Paste the customer's question")
-    st.caption(
-        "Enter the message as the homeowner wrote it — from email, chat, or phone notes."
-    )
+    st.markdown("**Customer's Question:**")
 
     question = st.text_area(
         "Customer message",
@@ -415,6 +403,37 @@ def render_answer_trace_and_sources(result: dict) -> None:
         render_workflow_code_snippets(result)
 
 
+def render_customer_reply(text: str) -> None:
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+    if not paragraphs:
+        st.info("")
+        return
+
+    if len(paragraphs) == 1:
+        st.info(paragraphs[0])
+        return
+
+    body = "".join(
+        f'<p style="margin:0 0 0.85rem 0;line-height:1.6;">{html.escape(p)}</p>'
+        for p in paragraphs[:-1]
+    )
+    body += (
+        f'<p style="margin:0;line-height:1.6;">{html.escape(paragraphs[-1])}</p>'
+    )
+    st.markdown(
+        f"""
+<div style="
+    background-color: rgba(28, 131, 225, 0.15);
+    border: 1px solid rgba(28, 131, 225, 0.4);
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+    color: #fafafa;
+">{body}</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_results(result: dict) -> None:
     risk_level = result.get("risk_level", "Low")
     escalation_required = result.get("escalation_required", False)
@@ -438,7 +457,7 @@ def render_results(result: dict) -> None:
     render_internal_note(result, note)
 
     st.markdown("##### Reply to send the customer")
-    st.info(result.get("customer_response", ""))
+    render_customer_reply(result.get("customer_response", ""))
 
     render_answer_trace_and_sources(result)
 

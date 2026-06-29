@@ -9,6 +9,7 @@ from src.prompts import (
     SAFETY_GENERATE_SYSTEM,
     SAFETY_GENERATE_USER,
 )
+from src.response_formatter import format_customer_response
 
 
 def generate_answer(state: AgentState) -> AgentState:
@@ -37,6 +38,9 @@ def generate_answer(state: AgentState) -> AgentState:
 
     if "Recommended action:" in recommended_action:
         recommended_action = recommended_action.split("Recommended action:", 1)[-1].strip()
+
+    if not state.get("safety_risk"):
+        customer_response = format_customer_response(customer_response)
 
     return {
         **state,

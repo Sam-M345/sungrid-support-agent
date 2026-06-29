@@ -2,7 +2,64 @@
 
 from __future__ import annotations
 
+import re
+
 from langchain_core.documents import Document
+
+CHEESY_PHRASE_PATTERNS = (
+    r",?\s*and we(?:'|')?re glad you did!?",
+    r",?\s*we are glad you did!?",
+    r",?\s*we(?:'|')?re so glad you reached out!?",
+    r",?\s*we are so glad you reached out!?",
+    r",?\s*we(?:'|')?re happy you reached out!?",
+    r",?\s*we are happy you reached out!?",
+    r",?\s*we(?:'|')?re delighted you contacted us!?",
+    r"\s*[—–-]\s*we(?:'|')?re glad you did!?",
+    r"\s*[—–-]\s*we are glad you did!?",
+)
+
+
+def format_customer_response(text: str) -> str:
+    """Normalize customer reply tone and add a paragraph break after the greeting."""
+    if not text or not text.strip():
+        return text
+
+    cleaned = text.strip()
+    for pattern in CHEESY_PHRASE_PATTERNS:
+        cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
+    cleaned = re.sub(r"\s+([.!?])", r"\1", cleaned)
+    cleaned = re.sub(r"\s*[—–-]\s*$", "", cleaned)
+
+    if "\n\n" in cleaned:
+        return cleaned
+
+    if not re.search(r"\bthank\b", cleaned, re.IGNORECASE):
+        return cleaned
+
+    dash_parts = re.split(r"\s*[—–-]\s+", cleaned, maxsplit=1)
+    if len(dash_parts) == 2 and re.search(r"\bthank\b", dash_parts[0], re.IGNORECASE):
+        greeting = dash_parts[0].strip().rstrip(",")
+        if greeting[-1] not in ".!?":
+            greeting += "."
+        return f"{greeting}\n\n{dash_parts[1].strip()}"
+
+    sentence_match = re.match(r"^(.+?[.!?])\s+(.+)$", cleaned, re.DOTALL)
+    if sentence_match and re.search(r"\bthank\b", sentence_match.group(1), re.IGNORECASE):
+        return f"{sentence_match.group(1).strip()}\n\n{sentence_match.group(2).strip()}"
+
+    body_match = re.match(
+        r"^(Thank you.+?reaching out to us)\.?\s+([A-Z].+)$",
+        cleaned,
+        re.DOTALL | re.IGNORECASE,
+    )
+    if body_match:
+        greeting = body_match.group(1).strip().rstrip(",")
+        if greeting[-1] not in ".!?":
+            greeting += "."
+        return f"{greeting}\n\n{body_match.group(2).strip()}"
+
+    return cleaned
 
 
 def format_sources(documents: list[Document]) -> list[str]:
