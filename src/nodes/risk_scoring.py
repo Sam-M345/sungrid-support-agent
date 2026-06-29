@@ -7,36 +7,45 @@ import re
 from src.graph_state import AgentState, append_trace
 
 
-def _sentence_bounds(text: str, pos: int) -> tuple[int, int]:
-    start = text.rfind(".", 0, pos) + 1
-    end = text.find(".", pos)
-    if end == -1:
-        end = len(text)
-    return start, end
+def _action_steps(action: str) -> list[str]:
+    """Split numbered rep guidance into individual steps."""
+    if not re.search(r"\d+\.\s", action):
+        return [action.strip()]
+
+    parts = re.split(r"\s*(?=\d+\.\s)", action.strip())
+    steps: list[str] = []
+    for part in parts:
+        cleaned = re.sub(r"^\d+\.\s*", "", part.strip())
+        if cleaned:
+            steps.append(cleaned)
+    return steps or [action.strip()]
+
+
+def _step_requires_handoff(step: str) -> bool:
+    lower = step.lower()
+    if re.search(r"\bif\b", lower):
+        return False
+    if re.search(r"\bonly if\b", lower):
+        return False
+    if re.search(r"\bdo not (?:escalat|dispatch)", lower):
+        return False
+    if re.search(r"\bescalat\w*\s+(?:to|per)\b", lower):
+        return True
+    if re.search(r"\bdispatch\b", lower):
+        return True
+    return False
 
 
 def _action_requires_handoff(action: str) -> bool:
     """True when rep-facing steps require handing off to another team now."""
     lower = action.lower()
 
-    if re.search(r"\bdispatch\b", lower) and not re.search(r"do not dispatch", lower):
-        return True
     if re.search(r"\bsafety\s+dispatch\b", lower):
         return True
     if "escalate immediately" in lower:
         return True
 
-    for match in re.finditer(r"\bescalat\w*\s+(?:to|per)\b", lower):
-        start, end = _sentence_bounds(lower, match.start())
-        sentence = lower[start:end].strip()
-        if re.search(r"\bif\b.+\bescalat", sentence):
-            continue
-        if re.search(r"\bescalat\w*\s+(?:to|per)\b.+\bonly if\b", sentence):
-            continue
-        if re.search(r"\bdo not escalat", sentence):
-            continue
-        return True
-    return False
+    return any(_step_requires_handoff(step) for step in _action_steps(action))
 
 
 def risk_scoring(state: AgentState) -> AgentState:
