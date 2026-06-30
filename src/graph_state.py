@@ -77,9 +77,15 @@ def parse_sections(text: str) -> tuple[str, str]:
 def parse_json_content(text: str) -> dict:
     cleaned = text.strip()
     if cleaned.startswith("```"):
-        cleaned = re.sub(r"^```(?:json)?", "", cleaned).strip()
-        cleaned = re.sub(r"```$", "", cleaned).strip()
-    return json.loads(cleaned)
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\s*```.*$", "", cleaned, flags=re.DOTALL).strip()
+
+    start = cleaned.find("{")
+    if start == -1:
+        return json.loads(cleaned)
+
+    payload, _ = json.JSONDecoder().raw_decode(cleaned[start:])
+    return payload
 
 
 def invoke_llm(system_prompt: str, user_prompt: str) -> str:

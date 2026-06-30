@@ -23,11 +23,35 @@ def validate_answer(state: AgentState) -> AgentState:
     try:
         payload = parse_json_content(raw)
     except (json.JSONDecodeError, ValueError):
-        payload = {"passed": True, "issues": [], "confidence": 65}
+        passed, issues, confidence = validate_response(
+            question=state["question"],
+            customer_response=state.get("customer_response", ""),
+            safety_risk=state.get("safety_risk", False),
+            llm_passed=False,
+            llm_issues=["Validation model returned unparseable JSON"],
+            confidence=0,
+        )
+        validation_notes = "; ".join(issues)
+        trace_status = "Validation flagged issues"
+        return {
+            **state,
+            "validation_passed": passed,
+            "validation_notes": validation_notes,
+            "confidence": confidence,
+            "workflow_trace": append_trace(state, f"Step 4: {trace_status}"),
+        }
 
     llm_passed = bool(payload.get("passed", False))
     llm_issues = payload.get("issues", [])
-    confidence = int(payload.get("confidence", 70))
+    if not isinstance(llm_issues, list):
+        llm_issues = []
+
+    if "confidence" not in payload:
+        llm_passed = False
+        llm_issues = [*llm_issues, "Validation model response missing confidence score"]
+        confidence = 0
+    else:
+        confidence = max(0, min(100, int(payload["confidence"])))
 
     passed, issues, confidence = validate_response(
         question=state["question"],

@@ -7,17 +7,12 @@ import re
 from src.graph_state import AgentState, append_trace
 
 
+from src.response_formatter import split_numbered_steps
+
+
 def _action_steps(action: str) -> list[str]:
     """Split numbered rep guidance into individual steps."""
-    if not re.search(r"\d+\.\s", action):
-        return [action.strip()]
-
-    parts = re.split(r"\s*(?=\d+\.\s)", action.strip())
-    steps: list[str] = []
-    for part in parts:
-        cleaned = re.sub(r"^\d+\.\s*", "", part.strip())
-        if cleaned:
-            steps.append(cleaned)
+    steps = split_numbered_steps(action)
     return steps or [action.strip()]
 
 

@@ -76,7 +76,7 @@ Policy excerpts:
 Draft customer response:
 {customer_response}
 
-Reply with JSON:
+Reply with JSON only — no markdown fences, no explanation after the JSON:
 - passed: true or false
 - issues: list of short issue strings (empty if passed)
 - confidence: integer 0-100 estimating grounding quality

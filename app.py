@@ -12,6 +12,11 @@ import time
 import streamlit as st
 
 from src.graph import build_graph, invoke_agent
+from src.response_formatter import (
+    _normalize_customer_paragraphs,
+    _strip_step_marker,
+    split_numbered_steps,
+)
 from src.vector_store import get_vector_store
 
 SAMPLE_QUESTIONS = [
@@ -143,8 +148,8 @@ def load_resources():
 def render_header() -> None:
     st.title("SunGrid Support Agent")
     st.info(
-        "**Used by:** SunGrid customer support reps. Paste a homeowner message to "
-        "generate a customer-ready reply, internal notes, sources, and escalation guidance."
+        "AI copilot for SunGrid support reps. Generates customer-ready replies, "
+        "internal guidance, sources, and escalation recommendations."
     )
 
 
@@ -177,32 +182,17 @@ def render_workflow_code_snippets(result: dict) -> None:
 
 
 def _recommended_action_bullets(action: str) -> list[str]:
-    """Split internal recommended action text into one item per numbered step."""
-    if not action or not action.strip():
-        return ["Review draft and respond to homeowner."]
-
-    text = re.sub(r"\s+", " ", action.strip())
-
-    if re.search(r"\d+\.\s", text):
-        parts = re.split(r"\s*(?=\d+\.\s)", text)
-        bullets: list[str] = []
-        for part in parts:
-            cleaned = re.sub(r"^\d+\.\s*", "", part.strip()).strip()
-            if cleaned:
-                bullets.append(cleaned)
-        if bullets:
-            return bullets
-
-    bullets = []
-    for line in action.strip().split("\n"):
-        cleaned = re.sub(r"^\d+\.\s*", "", line.strip())
-        if cleaned:
-            bullets.append(cleaned)
-
+    """Split internal recommended action text into one item per step."""
+    bullets = split_numbered_steps(action)
+    if len(bullets) == 1 and re.search(r"\s+-\s+", bullets[0]):
+        bullets = [part.strip() for part in re.split(r"\s+-\s+", bullets[0]) if part.strip()]
+    bullets = [_strip_step_marker(bullet) for bullet in bullets]
+    bullets = [bullet for bullet in bullets if bullet]
     if bullets:
         return bullets
-
-    return [action.strip()]
+    if action and action.strip():
+        return [_strip_step_marker(action)]
+    return ["Review draft and respond to homeowner."]
 
 
 def render_internal_note(result: dict, note: dict) -> None:
@@ -225,13 +215,14 @@ def render_internal_note(result: dict, note: dict) -> None:
             f'<li style="margin-bottom:0.65rem;">{html.escape(bullet)}</li>'
             for bullet in bullets
         )
-        body_html = f"""<ol style="
+        body_html = f"""<ul style="
         margin: 0;
         padding-left: 1.35rem;
         color: #f0f4f8;
         line-height: 1.55;
         font-size: 0.98rem;
-    ">{steps_html}</ol>"""
+        list-style-type: disc;
+    ">{steps_html}</ul>"""
     st.markdown(
         f"""
 <div style="
@@ -316,7 +307,7 @@ def render_question_input() -> str:
         label_visibility="collapsed",
     )
 
-    run_clicked = st.button("Generate support draft", type="primary")
+    run_clicked = st.button("Generate response", type="primary")
 
     if run_clicked:
         trimmed = question.strip()
@@ -404,7 +395,9 @@ def render_answer_trace_and_sources(result: dict) -> None:
 
 
 def render_customer_reply(text: str) -> None:
+    text = _normalize_customer_paragraphs(text.strip())
     paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+    paragraphs = [re.sub(r"\s*[-—–]+\s*$", "", p) for p in paragraphs]
     if not paragraphs:
         st.info("")
         return
