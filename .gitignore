@@ -6,7 +6,17 @@ __pycache__/
 .chroma/
 .streamlit/secrets.toml
 streamlit secrets.md
+learning-notes.md
 .venv/
 venv/
 *.egg-info/
 .DS_Store
+
+# Local assets — images and demo script (not committed)
+assets/**/*.png
+assets/**/*.jpg
+assets/**/*.jpeg
+assets/**/*.gif
+assets/**/*.webp
+assets/**/*.svg
+assets/demo_script.md
