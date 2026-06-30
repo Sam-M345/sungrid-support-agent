@@ -4,7 +4,7 @@
 
 [![Streamlit](https://img.shields.io/badge/Demo-Streamlit-FF4B4B)](https://sungrid-support-agent.streamlit.app) ![Python](https://img.shields.io/badge/Python-3.12-blue) ![LangGraph](https://img.shields.io/badge/Orchestration-LangGraph-green)
 
-> **Live demo:** _Coming soon — Phase 8 deploy_  
+> **Live demo:** [sungrid-support-agent.streamlit.app](https://sungrid-support-agent.streamlit.app)  
 > **Synthetic portfolio project** — fictional company documents only. Not real solar, warranty, safety, or financial advice.
 
 ---
@@ -118,7 +118,7 @@ Conditional steps ("escalate only if damage confirmed") do **not** trigger immed
 ## How to run locally
 
 ```powershell
-git clone <your-repo-url>
+git clone https://github.com/Sam-M345/sungrid-support-agent.git
 cd sungrid-support-agent
 python -m venv .venv
 .\.venv\Scripts\pip install -r requirements.txt
@@ -141,12 +141,14 @@ Open http://localhost:8501 — paste a customer question or pick a sample.
 
 ## Deployment
 
-_Target: Streamlit Community Cloud (Phase 8)_
+**Live:** [sungrid-support-agent.streamlit.app](https://sungrid-support-agent.streamlit.app) — Streamlit Community Cloud, Python 3.12, entrypoint `app.py`.
 
-1. Push repo to GitHub (no `.env` — use `.env.example`)
-2. Connect [share.streamlit.io](https://share.streamlit.io) → `app.py`
-3. Add secrets: `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `LANGCHAIN_*`, `ANONYMIZED_TELEMETRY`
-4. First cold start may take ~30s while embeddings load — documented here intentionally
+To deploy your own fork:
+
+1. Push to GitHub (no `.env` — use `.env.example`)
+2. Connect [share.streamlit.io](https://share.streamlit.io) → repo `Sam-M345/sungrid-support-agent`, branch `main`, `app.py`
+3. **Secrets** (TOML): `ANTHROPIC_API_KEY` (required), plus `ANTHROPIC_MODEL`, `LANGCHAIN_*` for LangSmith tracing
+4. First cold start may take ~30s while HuggingFace embeddings load
 
 ---
 

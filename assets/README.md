@@ -11,6 +11,6 @@
 
 ## Next steps
 
-1. **Deploy** — Streamlit Community Cloud (Phase 8), then update live demo link in root `README.md`
+1. ~~**Deploy** — Streamlit Community Cloud~~ ✅ [Live demo](https://sungrid-support-agent.streamlit.app)
 2. **Optional** — retake `streamlit_screenshot.png` with Results section visible after Case 1
 3. **Phase 9** — record demo video using `demo_script.md`

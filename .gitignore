@@ -5,6 +5,7 @@ __pycache__/
 *.py[cod]
 .chroma/
 .streamlit/secrets.toml
+streamlit secrets.md
 .venv/
 venv/
 *.egg-info/
